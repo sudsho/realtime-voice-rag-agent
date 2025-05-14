@@ -1,0 +1,67 @@
+:root {
+  --bg: #0d1117;
+  --fg: #e6edf3;
+  --muted: #7d8590;
+  --accent: #58a6ff;
+  --user: #1f6feb;
+  --agent: #2ea043;
+  --panel: #161b22;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+main {
+  max-width: 720px;
+  margin: 32px auto;
+  padding: 0 16px 64px;
+}
+
+header h1 { margin: 0 0 4px; font-size: 22px; }
+header .sub { color: var(--muted); margin: 0 0 24px; }
+
+.orb-wrap { display: flex; flex-direction: column; align-items: center; padding: 24px 0; }
+.orb {
+  width: 140px; height: 140px; border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, var(--accent), #1c2330);
+  border: none; cursor: pointer; color: var(--fg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: transform .15s ease;
+}
+.orb:hover { transform: scale(1.02); }
+.orb[aria-pressed="true"] { box-shadow: 0 0 0 8px rgba(88,166,255,.25); }
+.orb-dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; opacity: .6; }
+.orb-label { margin-top: 8px; font-size: 12px; opacity: .85; }
+
+.status { margin-top: 12px; color: var(--muted); font-size: 13px; min-height: 18px; }
+
+.panel {
+  background: var(--panel); padding: 16px; border-radius: 8px; margin: 16px 0;
+}
+.row { display: flex; gap: 12px; margin-bottom: 8px; }
+.tag {
+  flex: 0 0 56px; color: var(--muted); font-size: 12px; padding-top: 4px;
+  text-align: right;
+}
+.bubble {
+  background: #20262d; padding: 8px 12px; border-radius: 8px; flex: 1;
+  white-space: pre-wrap;
+}
+.bubble.user { border-left: 3px solid var(--user); }
+.bubble.agent { border-left: 3px solid var(--agent); }
+
+.meters h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); }
+.meters ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px 16px; }
+.meters li { font-variant-numeric: tabular-nums; color: var(--fg); font-size: 13px; }
+
+footer { color: var(--muted); margin-top: 24px; font-size: 12px; }
+footer button {
+  background: transparent; border: 1px solid #30363d; color: var(--fg);
+  padding: 2px 8px; border-radius: 4px; cursor: pointer;
+}
