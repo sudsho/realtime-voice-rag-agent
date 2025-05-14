@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>voice rag agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>support voice agent</h1>
+      <p class="sub">press the mic, ask a question, get a spoken answer.</p>
+    </header>
+
+    <section class="orb-wrap">
+      <button id="mic-btn" class="orb" aria-pressed="false" aria-label="hold to talk">
+        <span class="orb-dot"></span>
+        <span class="orb-label">tap to talk</span>
+      </button>
+      <div id="status" class="status">idle</div>
+    </section>
+
+    <section class="panel">
+      <div class="row">
+        <span class="tag">you</span>
+        <span id="transcript" class="bubble user">…</span>
+      </div>
+      <div class="row">
+        <span class="tag">agent</span>
+        <span id="answer" class="bubble agent"></span>
+      </div>
+    </section>
+
+    <section class="panel meters" id="meters" hidden>
+      <h3>last turn</h3>
+      <ul id="metrics"></ul>
+    </section>
+
+    <footer>
+      <small>
+        <span id="connstate">disconnected</span> ·
+        <button id="reconnect">reconnect</button>
+      </small>
+    </footer>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>
