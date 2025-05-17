@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from src.agent.pipeline import VoicePipeline
+from src.api.healthz import router as healthz_router
 from src.config import load_config
 from src.logging_utils import get_logger, setup_logging
 from src.ws.server import VoiceWsHandler
@@ -37,6 +38,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="voice-rag-agent", lifespan=lifespan)
+app.include_router(healthz_router)
 
 
 @app.get("/health")
