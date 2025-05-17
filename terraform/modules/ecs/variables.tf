@@ -1,0 +1,11 @@
+variable "name" { type = string }
+variable "vpc_id" { type = string }
+variable "private_subnet_ids" { type = list(string) }
+variable "public_subnet_ids" { type = list(string) }
+variable "image" { type = string }
+variable "container_port" { type = number }
+variable "cpu" { type = number }
+variable "memory" { type = number }
+variable "desired_count" { type = number }
+variable "openai_secret_arn" { type = string }
+variable "tags" { type = map(string) }
