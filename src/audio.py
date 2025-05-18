@@ -61,8 +61,12 @@ def resample(arr: np.ndarray, src_sr: int, dst_sr: int = TARGET_SR) -> np.ndarra
 
 
 def to_mono(arr: np.ndarray, channels: int) -> np.ndarray:
-    if channels == 1:
+    if channels <= 1:
         return arr
+    # interleaved samples - L, R, L, R - average pairs
+    if arr.size % channels != 0:
+        # drop tail samples that don't form a full frame
+        arr = arr[: arr.size - (arr.size % channels)]
     return arr.reshape(-1, channels).mean(axis=1).astype(np.float32)
 
 
