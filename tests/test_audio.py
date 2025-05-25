@@ -42,8 +42,9 @@ def test_resample_passthrough_when_same_rate():
 def test_resample_changes_length():
     arr = np.linspace(0, 1, 1000, dtype=np.float32)
     out = resample(arr, 48000, 16000)
-    # roughly a third the length
-    assert 320 <= out.size <= 340
+    # roughly a third the length; loose bounds because of integer rounding
+    expected = round(1000 * 16000 / 48000)
+    assert abs(out.size - expected) <= 2
 
 
 def test_chunker_emits_fixed_size_frames():
