@@ -51,6 +51,8 @@ def _split_long_paragraph(p: str, max_chars: int) -> List[str]:
 
 
 def chunk_text(text: str, max_tokens: int = 350, overlap_tokens: int = 40) -> List[Chunk]:
+    if not text or not text.strip():
+        return []
     max_chars = max_tokens * CHARS_PER_TOKEN
     overlap_chars = overlap_tokens * CHARS_PER_TOKEN
     paragraphs = [p.strip() for p in _PARA_RE.split(text) if p.strip()]
