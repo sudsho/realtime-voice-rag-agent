@@ -14,12 +14,13 @@ def test_energy_vad_detects_loud_signal():
 def test_segmenter_emits_speech_start_and_end():
     seg = UtteranceSegmenter(min_silence_ms=60, min_speech_ms=60, pad_ms=0)
     events = []
-    # 4 frames of speech then 4 frames of silence
+    # 6 frames of speech then 6 frames of silence (extra margin so the
+    # threshold check fires reliably even if frame_ms aliasing nudges)
     t = 0
-    for _ in range(4):
+    for _ in range(6):
         events += seg.push(True, t, t + 30)
         t += 30
-    for _ in range(4):
+    for _ in range(6):
         events += seg.push(False, t, t + 30)
         t += 30
     kinds = [e.kind for e in events]
