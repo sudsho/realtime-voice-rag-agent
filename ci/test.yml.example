@@ -1,0 +1,48 @@
+# GitHub Actions workflow (kept under ci/ since the bot account that built
+# this repo did not have the workflow scope at the time). Move to
+# .github/workflows/test.yml to enable.
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: system deps for audio
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libsndfile1
+
+      - name: install
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt
+          pip install ruff pytest pytest-asyncio
+
+      - name: ruff
+        run: ruff check src tests
+
+      - name: pytest
+        env:
+          OPENAI_API_KEY: dummy
+        run: pytest -q
+
+  build-image:
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: build docker image
+        run: docker build -t voice-rag-agent:ci .
