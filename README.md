@@ -65,18 +65,18 @@ terraform init && terraform apply
 
 ## What's in the repo
 
-- `src/stt/` — whisper streaming wrapper with VAD
-- `src/tts/` — XTTS/OpenAI TTS streaming
-- `src/rag/` — Chroma indexer + reranker
-- `src/agent/` — pipeline wiring STT → RAG → LLM → TTS as async generators
-- `src/audio.py` — resample + chunking + PCM utils
-- `src/ws/server.py` — WebSocket gateway
-- `src/api/main.py` — FastAPI server (HTTP health + WS endpoint)
-- `frontend/` — minimal HTML + JS for mic capture and audio playback
-- `terraform/` — ECS Fargate + ALB + CloudFront
-- `tests/` — unit (audio chunking, RAG retrieve) + integration (WS round-trip with mock LLM)
-- `configs/` — default + production knobs
-- `notebooks/latency_profile.ipynb` — per-stage latency breakdown
+- `src/stt/` - whisper streaming wrapper with VAD
+- `src/tts/` - XTTS/OpenAI TTS streaming
+- `src/rag/` - Chroma indexer + reranker
+- `src/agent/` - pipeline wiring STT → RAG → LLM → TTS as async generators
+- `src/audio.py` - resample + chunking + PCM utils
+- `src/ws/server.py` - WebSocket gateway
+- `src/api/main.py` - FastAPI server (HTTP health + WS endpoint)
+- `frontend/` - minimal HTML + JS for mic capture and audio playback
+- `terraform/` - ECS Fargate + ALB + CloudFront
+- `tests/` - unit (audio chunking, RAG retrieve) + integration (WS round-trip with mock LLM)
+- `configs/` - default + production knobs
+- `notebooks/latency_profile.ipynb` - per-stage latency breakdown
 
 ## Known limitations
 
