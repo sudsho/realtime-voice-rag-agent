@@ -1,6 +1,3 @@
-# GitHub Actions workflow (kept under ci/ since the bot account that built
-# this repo did not have the workflow scope at the time). Move to
-# .github/workflows/test.yml to enable.
 name: test
 
 on:

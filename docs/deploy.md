@@ -64,13 +64,12 @@ git checkout main -- .
 
 1. `/healthz` and `/readyz` return 200
 2. CloudWatch logs show structured JSON with `LOG_FORMAT=json`
-3. open the frontend, speak, confirm:
-   - first audio chunk arrives within ~300ms after the LLM starts streaming
-   - barge-in interrupts ongoing speech
-4. CloudWatch metric `WSConnections` and `TurnLatencyMs` are flowing
+3. open the frontend, speak, confirm a full turn round-trips end to end
 
 ## scaling notes
 
-- service is sized for ~50 concurrent sessions per task (CPU-bound on STT)
-- horizontal autoscaling on `CPUUtilization` target 60% via terraform
-- bump `desired_count` for a hard floor before a known burst
+- the ECS service uses a fixed `desired_count`; no autoscaling policy is
+  declared in `terraform/`
+- no load test has been run, so capacity per task is not characterised
+- no custom CloudWatch metrics are emitted by the app; only the awslogs
+  log group is created by terraform

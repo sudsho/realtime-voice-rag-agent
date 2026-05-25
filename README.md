@@ -1,41 +1,43 @@
 # realtime-voice-rag-agent
 
-Low-latency voice agent for customer support. Mic audio in, voice answer out, RAG over a knowledge base in the middle. Target round-trip under 1s on a warm pipeline.
+Voice-interface RAG demo: FastAPI/WebSocket gateway, faster-whisper transcription, ChromaDB retrieval with an optional cross-encoder rerank, and token-streaming OpenAI responses handed clause-by-clause to a streaming TTS provider.
 
 ## Why
 
-Most voice support bots feel slow because they batch the whole pipeline: record-then-transcribe, then-retrieve, then-generate, then-synthesize. Each stage waits for the previous to fully finish. This repo does it streaming end-to-end so the user starts hearing the response while the LLM is still drafting the rest.
+Support-style voice bots feel slow because they batch the whole pipeline: record, then transcribe, then retrieve, then generate, then synthesize. This repo hands each completed clause from the LLM stream to TTS as it lands, so the TTS provider can start on the first sentence while the LLM is still emitting the rest. No latency numbers are measured in this checkout.
 
 ## Stack
 
-- **STT**: faster-whisper (small.en) with VAD-driven chunking via pyannote-audio
-- **RAG**: ChromaDB vector store + small reranker over a customer-support knowledge base
-- **LLM**: OpenAI API (`gpt-4o-mini` default) or local llama.cpp (config-switchable)
-- **TTS**: OpenAI streaming TTS, fallback to Coqui XTTS-v2
+- **STT**: faster-whisper (small.en), batch transcription per user turn (single call once the client sends `stop`)
+- **RAG**: ChromaDB dense retrieval, with an optional cross-encoder rerank when `sentence-transformers` is installed
+- **LLM**: OpenAI API (`gpt-4o-mini` default) via `AsyncOpenAI`
+- **TTS**: OpenAI streaming TTS
 - **Transport**: WebSocket between browser and FastAPI
-- **Deployment**: AWS ECS Fargate + ALB + CloudFront via Terraform
+- **Deployment**: AWS ECS Fargate + ALB + CloudFront authored in Terraform (never applied from this repo, no committed state)
 
 ## Architecture
 
 ```
-browser  --WebRTC mic-->  FastAPI WS  --frames-->  VAD  --chunks-->  whisper-stream
-                                                                            |
-                                                                       transcript
-                                                                            v
-                                                                     chroma retrieve
-                                                                            |
-                                                                          context
-                                                                            v
-                                                                       llm stream (token by token)
-                                                                            |
-                                                                       text chunks
-                                                                            v
-                                                                       streaming TTS
-                                                                            |
-                                                                       audio frames
-                                                                            v
-                                                       browser  <--WebSocket--  FastAPI WS
+browser  --WS binary PCM-->  FastAPI WS  --buffer-->  faster-whisper (on stop)
+                                                              |
+                                                         transcript
+                                                              v
+                                                       chroma retrieve
+                                                              |
+                                                            context
+                                                              v
+                                                       llm stream (token by token)
+                                                              |
+                                                       clause chunks
+                                                              v
+                                                       streaming TTS
+                                                              |
+                                                       audio frames
+                                                              v
+                                     browser  <--WebSocket--  FastAPI WS
 ```
+
+Endpointing is client-driven: the browser sends `{"type":"stop"}` when the user releases the mic button, and the server then runs one whisper pass on the buffered utterance. There is no server-side VAD in the serving path.
 
 ## Run locally
 
@@ -45,10 +47,10 @@ make install
 
 # 2. set env
 cp .env.example .env
-# fill in OPENAI_API_KEY (or LLAMA_CPP_MODEL_PATH)
+# fill in OPENAI_API_KEY
 
 # 3. ingest sample knowledge base
-make ingest
+make kb-ingest
 
 # 4. boot
 make serve
@@ -63,29 +65,35 @@ terraform init && terraform apply
 # follow the printed ALB URL; CloudFront URL is in outputs
 ```
 
+The Terraform stack (VPC, subnets, NAT, ALB with sticky cookies, ECS Fargate service/task, CloudFront, Secrets Manager wiring) is complete but has not been applied from this repo. There is no committed tfstate. ECS `desired_count` is fixed; no autoscaling policy is declared.
+
 ## What's in the repo
 
-- `src/stt/` - whisper streaming wrapper with VAD
-- `src/tts/` - XTTS/OpenAI TTS streaming
-- `src/rag/` - Chroma indexer + reranker
-- `src/agent/` - pipeline wiring STT → RAG → LLM → TTS as async generators
-- `src/audio.py` - resample + chunking + PCM utils
+- `src/stt/` - faster-whisper wrapper (`whisper_stream.py`). `vad.py` contains a Silero-VAD wrapper and utterance segmenter that are not wired into the serving path.
+- `src/tts/` - OpenAI streaming TTS provider and factory. A stub `xtts.py` is present but its dependency is not declared.
+- `src/rag/` - Chroma store, retriever with optional cross-encoder rerank, ingest CLI. `bm25.py` and `hybrid.py` implement a sparse index and RRF fusion respectively, unit-tested only, not wired into the pipeline.
+- `src/agent/` - pipeline wiring STT -> RAG -> LLM -> TTS as async coroutines; sentence buffer for clause-by-clause TTS handoff; barge-in detector class (not instantiated by the serving path).
+- `src/audio.py` - resample + PCM utils
 - `src/ws/server.py` - WebSocket gateway
 - `src/api/main.py` - FastAPI server (HTTP health + WS endpoint)
 - `frontend/` - minimal HTML + JS for mic capture and audio playback
-- `terraform/` - ECS Fargate + ALB + CloudFront
-- `tests/` - unit (audio chunking, RAG retrieve) + integration (WS round-trip with mock LLM)
+- `terraform/` - ECS Fargate + ALB + CloudFront (not applied)
+- `tests/` - unit tests for audio, chunker, RAG retrieve, sentence buffer, BM25, hybrid retrieval, metrics, config, protocol, TTS factory, VAD utilities, health endpoint
 - `configs/` - default + production knobs
-- `notebooks/latency_profile.ipynb` - per-stage latency breakdown
+- `notebooks/latency_profile.ipynb` - scaffold for parsing structured logs. No executed cells, no committed log data.
 
 ## Known limitations
 
-- Cold start adds ~3s while whisper + XTTS load into GPU memory. The "<1s" target is on a warm pipeline only.
-- Without an OpenAI API key, the LLM fallback to llama.cpp expects a local GGUF in `models/` and runs noticeably slower on CPU.
+- Cold start is dominated by whisper model load. Default config is `device: cpu` / `compute_type: int8`; no GPU is required or exercised.
+- Endpointing in the serving path is a client-side push-to-talk stop message, not automatic VAD. The VAD/utterance-segmenter modules and the barge-in detector are implemented and unit-tested but not wired into `ws/server.py`.
+- Hybrid retrieval (BM25 + dense + RRF) is implemented in `src/rag/hybrid.py` and unit-tested. The running pipeline uses dense-only retrieval.
+- The Terraform stack is authored but has never been applied from this repo. No live deployment, no CloudWatch metrics, no autoscaling policy.
+- No latency benchmarks have been run in this checkout. Any per-stage figures in the docs are budgets, not measurements.
+- The cross-encoder reranker requires `sentence-transformers`, which is not pinned in `requirements.txt`; without it the retriever falls back to raw Chroma ordering.
 
 ## Ethics
 
-Voice cloning capabilities (XTTS) are intentionally limited to a fixed default voice. The fallback voice cloner is not wired into the demo path. Do not use this system to impersonate real individuals.
+Voice cloning capabilities are intentionally not wired into the demo path. Do not use this system to impersonate real individuals.
 
 ## License
 

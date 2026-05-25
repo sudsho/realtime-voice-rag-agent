@@ -1,9 +1,13 @@
 """barge-in detector.
 
-while the agent is speaking back, the user might start talking again. we
-keep VAD running on the inbound mic stream; if confident speech is detected
-for more than ``trigger_ms``, we fire a cancel of the in-flight turn and
-start a new one once the user stops.
+utility class that, given a stream of VAD decisions, flags the moment a
+sustained speech run crosses ``trigger_ms``. intended for cancelling an
+in-flight turn when the user starts talking again.
+
+not wired into the serving path in this repo: no VAD runs on the inbound
+mic stream in src/ws/server.py, and the shipped frontend does not send an
+interrupt message. the server does accept `{"type":"interrupt"}` if a
+client chooses to send one.
 """
 
 from __future__ import annotations

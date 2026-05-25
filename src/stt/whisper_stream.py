@@ -1,9 +1,7 @@
-"""streaming wrapper around faster-whisper.
+"""wrapper around faster-whisper.
 
-faster-whisper itself is not natively streaming; we run it on rolling audio
-windows that the VAD segmenter commits as utterances. partial transcripts are
-emitted as soon as a 1.5s tentative window crosses, then replaced when the
-final segment lands.
+one transcribe call per user turn on the buffered utterance. does not do
+its own windowing or partial-transcript emission.
 """
 
 from __future__ import annotations

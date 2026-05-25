@@ -1,11 +1,10 @@
 """voice activity detection.
 
-we keep two backends behind the same interface:
-- silero VAD via torch.hub for local dev (no extra setup, decent quality)
-- pyannote 3.3 segmentation when GPU is available
+silero VAD via torch.hub, with a cheap RMS-energy fallback if the model
+cannot be loaded. produces a stream of speech/silence transitions.
 
-both produce a stream of speech/silence transitions that the streaming STT
-loop uses to commit utterances.
+not currently wired into the serving path (see src/ws/server.py); kept here
+as a utility that scripts and tests import.
 """
 
 from __future__ import annotations
