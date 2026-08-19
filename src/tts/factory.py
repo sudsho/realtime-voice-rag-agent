@@ -16,4 +16,7 @@ def make_tts(cfg: dict | None = None):
     if provider == "xtts":
         from src.tts.xtts import XttsProvider
         return XttsProvider(voice=voice)
+    if provider in ("mock", "offline", "local"):
+        from src.tts.mock_tts import MockTts
+        return MockTts(voice=voice)
     raise ValueError(f"unknown tts provider: {provider}")

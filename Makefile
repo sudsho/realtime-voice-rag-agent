@@ -1,4 +1,4 @@
-.PHONY: install dev test lint serve docker-build docker-run kb-ingest clean
+.PHONY: install dev test lint serve smoke docker-build docker-run kb-ingest clean
 
 PY ?= python
 PORT ?= 8000
@@ -11,6 +11,9 @@ dev:
 
 serve:
 	uvicorn src.api.main:app --host 0.0.0.0 --port $(PORT) --workers 1
+
+smoke:
+	$(PY) scripts/smoke.py
 
 test:
 	pytest -q

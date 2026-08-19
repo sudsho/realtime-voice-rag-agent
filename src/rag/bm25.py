@@ -16,8 +16,20 @@ from typing import Dict, Iterable, List, Sequence
 _TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
 
 
+def _stem(tok: str) -> str:
+    """very small plural stemmer so 'refund' matches 'refunds'.
+
+    strips a single trailing 's' for words longer than three chars that do
+    not end in 'ss' (keeps 'business', 'process' intact). applied to both the
+    corpus and the query, so matching stays consistent either way.
+    """
+    if len(tok) > 3 and tok.endswith("s") and not tok.endswith("ss"):
+        return tok[:-1]
+    return tok
+
+
 def tokenize(text: str) -> List[str]:
-    return [t.lower() for t in _TOKEN_RE.findall(text)]
+    return [_stem(t.lower()) for t in _TOKEN_RE.findall(text)]
 
 
 @dataclass

@@ -1,0 +1,58 @@
+# Fully offline config: no API keys, no model downloads, no GPU, no cloud.
+# Every backend is swapped for a mock or a local, dependency-light stand-in so
+# the whole STT -> RAG -> LLM -> TTS pipeline runs anywhere. Used by
+# `scripts/smoke.py` / `make smoke`.
+app:
+  name: voice-rag-agent
+  log_level: INFO
+  sample_rate: 16000
+
+stt:
+  backend: mock            # mock ASR: returns a canned transcript, no faster-whisper
+  mock_transcript: "How long do I have to get a refund?"
+  model: small.en
+  device: cpu
+  compute_type: int8
+  beam_size: 1
+  language: en
+
+vad:
+  threshold: 0.5
+  min_silence_ms: 250
+  min_speech_ms: 200
+  pad_ms: 80
+
+rag:
+  backend: local           # in-memory hashing-embedding store, no chroma/keys
+  kb_dir: data/sample_kb
+  collection: support
+  top_k: 6
+  rerank_k: 3
+  reranker_model: null     # no cross-encoder download
+
+llm:
+  provider: local          # extractive generator over the retrieved context, no OpenAI key
+  max_sentences: 2
+  model: gpt-4o-mini
+  temperature: 0.1
+  max_tokens: 256
+  system_prompt: |
+    You are a customer support agent. Answer using only the provided context.
+    Keep answers under three sentences. If the context does not cover the
+    question, say so plainly and offer to escalate.
+
+tts:
+  provider: mock           # synthetic PCM bytes, no OpenAI/XTTS
+  voice: mock
+  format: pcm
+  sample_rate: 24000
+
+ws:
+  host: 0.0.0.0
+  port: 8000
+  max_message_bytes: 1048576
+
+aws:
+  region: us-east-1
+  ecs_cluster: voice-rag
+  ecs_service: voice-rag-svc

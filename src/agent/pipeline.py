@@ -15,26 +15,25 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any, List, Optional
 
 from fastapi import WebSocket
 
-from src.agent.llm import LlmDelta, StreamingLlm
-from src.agent.prompt import build_messages, DEFAULT_SYSTEM
+from src.agent.prompt import DEFAULT_SYSTEM, build_messages
 from src.agent.sentence_buffer import SentenceBuffer
 from src.config import load_config
 from src.logging_utils import get_logger
 from src.metrics import TurnMetrics
 from src.rag.retriever import Retriever
-from src.rag.store import ChromaStore
-from src.stt.whisper_stream import WhisperStream
 from src.tts.factory import make_tts
 from src.ws.protocol import (
-    msg_answer_delta, msg_answer_done, msg_error, msg_status,
-    msg_transcript, msg_tts_meta,
+    msg_answer_delta,
+    msg_answer_done,
+    msg_error,
+    msg_status,
+    msg_transcript,
+    msg_tts_meta,
 )
 from src.ws.session import Session
-
 
 log = get_logger(__name__)
 
@@ -42,9 +41,9 @@ log = get_logger(__name__)
 class VoicePipeline:
     def __init__(self, cfg: dict | None = None):
         self.cfg = cfg or load_config()
-        self._stt: Optional[WhisperStream] = None
-        self._retriever: Optional[Retriever] = None
-        self._llm: Optional[StreamingLlm] = None
+        self._stt = None
+        self._retriever: Retriever | None = None
+        self._llm = None
         self._tts = None
 
     def warm(self) -> None:
@@ -55,43 +54,33 @@ class VoicePipeline:
         _ = self.tts
 
     @property
-    def stt(self) -> WhisperStream:
+    def stt(self):
         if self._stt is None:
-            stt_cfg = self.cfg.get("stt", {})
-            self._stt = WhisperStream(
-                model_name=stt_cfg.get("model", "small.en"),
-                device=stt_cfg.get("device", "cpu"),
-                compute_type=stt_cfg.get("compute_type", "int8"),
-                beam_size=int(stt_cfg.get("beam_size", 1)),
-                language=stt_cfg.get("language", "en"),
-            )
+            from src.stt.factory import make_stt
+            self._stt = make_stt(self.cfg)
         return self._stt
 
     @property
     def retriever(self) -> Retriever:
         if self._retriever is None:
+            from src.rag.factory import make_store
             rag_cfg = self.cfg.get("rag", {})
-            store = ChromaStore(
-                persist_dir=rag_cfg.get("chroma_dir", ".chroma"),
-                collection=rag_cfg.get("collection", "support"),
-                embed_model=rag_cfg.get("embed_model", "text-embedding-3-small"),
-            )
+            store = make_store(self.cfg)
             self._retriever = Retriever(
                 store=store,
                 top_k=int(rag_cfg.get("top_k", 6)),
                 rerank_k=int(rag_cfg.get("rerank_k", 3)),
+                reranker_model=rag_cfg.get(
+                    "reranker_model", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+                ),
             )
         return self._retriever
 
     @property
-    def llm(self) -> StreamingLlm:
+    def llm(self):
         if self._llm is None:
-            l = self.cfg.get("llm", {})
-            self._llm = StreamingLlm(
-                model=l.get("model", "gpt-4o-mini"),
-                temperature=float(l.get("temperature", 0.1)),
-                max_tokens=int(l.get("max_tokens", 256)),
-            )
+            from src.agent.llm_factory import make_llm
+            self._llm = make_llm(self.cfg)
         return self._llm
 
     @property
@@ -154,7 +143,7 @@ class VoicePipeline:
         sys_prompt = self.cfg.get("llm", {}).get("system_prompt", DEFAULT_SYSTEM)
         messages = build_messages(text, docs, system=sys_prompt, history=session.history[:-1])
         sb = SentenceBuffer()
-        full_answer: List[str] = []
+        full_answer: list[str] = []
         first_token = False
 
         async for delta in self.llm.stream(messages):
